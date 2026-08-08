@@ -33,4 +33,9 @@ Theta_3 = (d_center / d_max) * 90°
 Controlled by the pinch distance (d_pinch) between the tip of the index finger (L_8) and the tip of the thumb (L_4).
 d_pinch = √((x_8 - x_4)² + (y_8 - y_4)²)
 Theta_4 = map(d_pinch, [20, 150] -> [0°, 90°])
+# OUTPUT IMAGES
+<img width="1915" height="1143" alt="image" src="https://github.com/user-attachments/assets/1fb67567-a708-42a6-843e-f5ebcb211dba" />
+<img width="801" height="644" alt="image" src="https://github.com/user-attachments/assets/45a781b0-84eb-4a70-8e4e-0bf7df8c3a1e" />
+<img width="900" height="1600" alt="STM32_CONNECTION " src="https://github.com/user-attachments/assets/3554d3fd-ce7f-46e3-a23f-8c534b515fdf" />
+
 
