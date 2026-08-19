@@ -41,17 +41,15 @@ addBody(robot, body4, 'elbow_link');
 
 % 2. Initialize Visualization
 figure('Name', 'Vision-Controlled 4-DOF Digital Twin', 'NumberTitle', 'off');
-ax = show(robot);
+show(robot);
 xlim([-0.4 0.4]); ylim([-0.4 0.4]); zlim([0 0.6]);
 view(45, 30); grid on;
 title('Waiting for MediaPipe Gesture Data...');
 
 % 3. UDP Setup & Real-Time Control Loop
 prev_angles = [90, 60, 45, 0]; 
-
-% FIX 1: Turn Frames 'on' so the joint axes are visible
+% Turn Frames 'on' so the joint axes are visible
 show(robot, deg2rad(prev_angles), 'PreservePlot', false, 'Frames', 'on');
-
 drawnow; 
 
 u = udpport("LocalPort", 5000);
@@ -60,16 +58,22 @@ disp('UDP Server active. Listening on port 5000...');
 while true
     if u.NumBytesAvailable > 0
         dataStr = char(read(u, u.NumBytesAvailable, "char"));
-        raw_angles = str2num(dataStr); 
+        raw_angles = str2double(split(dataStr, ','))';
         
         if length(raw_angles) == 4
+            
+            % --- THE INVERSION FIX ---
+            % Invert the 2nd DOF (Shoulder) to match physical hand movement.
+            % Limit is 120 degrees, so subtract from 120.
+            raw_angles(2) = 120.0 - raw_angles(2);
+            
             % Exponential Moving Average (EMA) Smoothing
             filtered_angles = (0.8 * prev_angles) + (0.2 * raw_angles);
             prev_angles = filtered_angles;
             
             q = deg2rad(filtered_angles);
             
-            % FIX 2: Turn Frames 'on' during the real-time update loop
+            % Turn Frames 'on' during the real-time update loop
             show(robot, q, 'PreservePlot', false, 'FastUpdate', true, 'Frames', 'on');
             drawnow;
         end
