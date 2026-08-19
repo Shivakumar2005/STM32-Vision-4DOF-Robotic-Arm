@@ -2,7 +2,7 @@
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main program body for 4-DOF Robotic Arm using PCA9685
+  * @brief          : Main program body for 4-DOF Robotic Arm using PCA9685 & UART
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -37,8 +37,8 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 char rx_buffer[50];
 uint8_t rx_byte;
-int rx_index = 0;
-int data_ready = 0;
+volatile int rx_index = 0;     // volatile keyword ensures interrupt updates this
+volatile int data_ready = 0;   // volatile keyword ensures interrupt updates this
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,8 +73,12 @@ void PCA9685_Init(I2C_HandleTypeDef *hi2c) {
 }
 
 void PCA9685_SetServoAngle(I2C_HandleTypeDef *hi2c, uint8_t channel, float angle) {
-    // Map 0-180 degrees to 150-600 PCA9685 tick range (approx 1ms to 2ms pulse)
-    uint16_t pulse_length = (uint16_t)(150 + (angle * (600 - 150) / 180.0));
+    // Constrain angle to prevent mechanical stalling
+    if (angle < 0.0) angle = 0.0;
+    if (angle > 180.0) angle = 180.0;
+
+    // Map 0-180 degrees to 102-512 ticks (approx 500us to 2500us)
+    uint16_t pulse_length = (uint16_t)(102 + (angle * (512 - 102) / 180.0));
 
     uint8_t buf[5];
     buf[0] = 0x06 + (4 * channel); // Register address for LED0_ON_L
@@ -116,13 +120,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+      // Check if a full string was received from Python via UART
       if (data_ready) {
           float t1, t2, t3, t4;
 
-          // Parse the incoming string
+          // Parse the incoming string (Format expected: "45.0,90.0,30.5,15.0\n")
           if (sscanf(rx_buffer, "%f,%f,%f,%f", &t1, &t2, &t3, &t4) == 4) {
 
-              // Apply angles to PCA9685 channels 0, 2, 4, 6
+              // Apply calculated kinematic angles to physical servos
               PCA9685_SetServoAngle(&hi2c1, 0, t1); // Base
               PCA9685_SetServoAngle(&hi2c1, 2, t2); // Shoulder
               PCA9685_SetServoAngle(&hi2c1, 4, t3); // Elbow
@@ -241,12 +246,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// This interrupt fires every time a single byte is received over UART
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if(huart->Instance == USART2) {
         if(rx_byte == '\n') {
             rx_buffer[rx_index] = '\0'; // Terminate the string
             data_ready = 1;             // Tell the while loop to process it
-            rx_index = 0;               // Reset buffer index
+            rx_index = 0;               // Reset buffer index for the next message
         } else {
             rx_buffer[rx_index++] = rx_byte; // Add character to buffer
             if(rx_index >= 50) rx_index = 0; // Prevent buffer overflow
