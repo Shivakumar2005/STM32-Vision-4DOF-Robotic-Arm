@@ -14,7 +14,7 @@ print("UDP Socket ready for MATLAB Digital Twin...")
 # ----------------- STM32 SERIAL SETUP ---------------
 # Change 'COM3' to your STM32's actual COM port
 try:
-    ser = serial.Serial('COM23', 115200, timeout=1) 
+    ser = serial.Serial('COM29', 115200, timeout=1) 
     print("Serial port opened successfully! Ready for Physical Robot...")
 except Exception as e:
     print(f"Error opening serial port: {e}")
